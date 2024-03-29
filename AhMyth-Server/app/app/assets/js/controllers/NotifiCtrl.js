@@ -1,16 +1,12 @@
-const { remote } = require('electron');
-const { ipcRenderer } = require('electron');
-var app = angular.module('myappy', []);
+const { remote, ipcRenderer } = require('electron');
+const app = angular.module('myappy', []);
 
-
-
-var victim = remote.getCurrentWebContents().victim;
-
+const victim = remote.getCurrentWebContents().victim;
 
 app.controller("NotifiCtrl", function($scope, $location) {
-    $NotifiCtrl = $scope;
+    const ctrl = $scope;
 
-    $NotifiCtrl.victimSocket = victim.ip + ":" + victim.port;
-    $NotifiCtrl.victimModel = victim.model;
-    $NotifiCtrl.victimCountry = victim.country;
+    ctrl.victimSocket = `${victim.ip}:${victim.port}`;
+    ctrl.victimModel = victim.model;
+    ctrl.victimCountry = victim.country;
 });
